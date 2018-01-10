@@ -68,6 +68,12 @@ def plot_mttbar(argv) :
     h_AK4M     = ROOT.TH1F("h_AK4M",";ak4jet_{mass};Number", 100, 0, 400)
     h_AK4Bdisc = ROOT.TH1F("h_AK4Bdisc",";ak4jet_{bdisc};Number", 100, 0, 1.0)
 
+    # Histograms by Yuan
+    h_AK4Num   = ROOT.TH1F("h_AK4Num",";ak4jet_{num};Number", 10, 0, 10)
+    h_AK8Num   = ROOT.TH1F("h_AK8Num",";ak8jet_{num};Number", 10, 0, 10)
+    h_lepNum   = ROOT.TH1F("h_lepNum",";lep_{num};Number", 10, 0, 10)
+
+
     fin = ROOT.TFile.Open(options.file_in)
 
     trees = [ fin.Get("TreeSemiLept") ]
@@ -293,6 +299,12 @@ def plot_mttbar(argv) :
 
             ttbarCand = hadTopCandP4 + lepTopCandP4
             mttbar = ttbarCand.M()
+	    
+	    # fill the number of fatjets, ak4jets and leptons
+	    h_AK8Num.Fill(FatJetMass.__len__())
+	    h_AK4Num.Fill(NearestAK4JetMass.__len__())
+	    h_lepNum.Fill(LeptonEnergy.__len__())
+
 
             h_mttbar.Fill( mttbar, SemiLeptWeight[0] )
             h_mtopHadGroomed.Fill( mass_sd, SemiLeptWeight[0] )
