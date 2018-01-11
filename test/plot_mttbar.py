@@ -10,6 +10,7 @@
 import sys
 import array as array
 from optparse import OptionParser
+import numpy as np
 
 
 def plot_mttbar(argv) :
@@ -46,37 +47,72 @@ def plot_mttbar(argv) :
     (options, args) = parser.parse_args(argv)
     argv = []
 
-    print '===== Command line options ====='
-    print options
-    print '================================'
+    #write to temp file
+    fh = open("num.txt", "a")
+
+    #print '===== Command line options ====='
+    #print options
+    #print '================================'
 
     import ROOT
 
     from leptonic_nu_z_component import solve_nu_tmass, solve_nu  #load Z_momentum with these functions
 
+    histogramSuffix = ''
+    #Adding name change to histograms based on --jec options and --jer options
+    if options.lepton == 'ele':
+        histogramSuffix = '__el'
+    if options.lepton == 'mu':
+        histogramSuffix = '__mu'
+
+    if options.jec is not None and options.jer is not None:
+        print 'You are trying to do two systematics at once! Please fix your input options'
+
+    if options.jec == 'up' :
+        histogramSuffix += '_jec_Up'
+
+    if options.jec == 'down' :
+	    histogramSuffix += '_jec_Down'
+
+    if options.jer == 'up' :
+        histogramSuffix += '_jer_Up'
+
+    if options.jer == 'down' :
+	    histogramSuffix += '_jer_Down'
+	    
     fout= ROOT.TFile(options.file_out, "RECREATE")
-    h_mttbar = ROOT.TH1F("h_mttbar", ";m_{t#bar{t}} (GeV);Number", 100, 0, 5000)#invariant ttbar mass
-    h_mtopHad = ROOT.TH1F("h_mtopHad", ";m_{jet} (GeV);Number", 100, 0, 400)
-    h_mtopHadGroomed = ROOT.TH1F("h_mtopHadGroomed", ";Groomed m_{jet} (GeV);Number", 100, 0, 400)
+
+    fpileup = ROOT.TFile.Open('purw.root', 'read')
+    h_pileupWeight = fpileup.Get('pileup') 
+  
+
+ 
+
+    h_cuts = ROOT.TH1F("Cut_flow", "", 4,0,4)
+
+    h_mttbar = ROOT.TH1F("h_mttbar"+histogramSuffix, ";m_{t#bar{t}} (GeV);Number", 100, 0, 5000)#invariant ttbar mass
+    h_mtopHad = ROOT.TH1F("h_mtopHad"+histogramSuffix, ";m_{jet} (GeV);Number", 100, 0, 400)
+    h_mtopHadGroomed = ROOT.TH1F("h_mtopHadGroomed"+histogramSuffix, ";Groomed m_{jet} (GeV);Number", 100, 0, 400)
 
     #ele plots
-    h_lepPt  = ROOT.TH1F("h_lepPt", "; lep_{pt}(GeV);Number", 100, 0, 1200)
-    h_lepEta = ROOT.TH1F("h_lepEta", ";lep_{#eta};Number", 50, -2.5, 2.5)
-    h_lepPhi = ROOT.TH1F("h_lepPhi", ";lep_{#phi};Number", 50, -3.2, 3.2)
+    h_lepPt  = ROOT.TH1F("h_lepPt"+histogramSuffix, "; lep_{pt}(GeV);Number", 100, 0, 1200)
+    h_lepEta = ROOT.TH1F("h_lepEta"+histogramSuffix, ";lep_{#eta};Number", 100, -2.5, 2.5)
+    h_lepPhi = ROOT.TH1F("h_lepPhi"+histogramSuffix, ";lep_{#phi};Number", 100, -3.5, 3.5)
 
     #AK8
-    h_AK8Pt = ROOT.TH1F("h_AK8Pt"  , ";AK8_{pt} (GeV);Number", 100, 400, 2500)
-    h_AK8Eta = ROOT.TH1F("h_AK8Eta", ";AK8_{#eta} ;Number", 50, -2.5, 2.5)
-    h_AK8Phi = ROOT.TH1F("h_AK8Phi", ";AK8_{#phi} ;Number", 50, -3.2, 3.2)
-    h_AK8Tau32 = ROOT.TH1F("h_AK8Tau32",";AK8_{#tau_{32}};Number", 50, 0.0, 1.0)
-    h_AK8Tau21 = ROOT.TH1F("h_AK8Tau21",";AK8_{#tau_{21}};Number", 50, 0.0, 1.0)
+
+    h_AK8Pt = ROOT.TH1F("h_AK8Pt"+histogramSuffix  , ";AK8_{pt} (GeV);Number", 100, 400, 2500)
+    h_AK8Eta = ROOT.TH1F("h_AK8Eta"+histogramSuffix, ";AK8_{#eta} ;Number", 100, -2.5, 2.5)
+    h_AK8Phi = ROOT.TH1F("h_AK8Phi"+histogramSuffix, ";AK8_{#phi} ;Number", 100, -3.5, 3.5)
+    h_AK8Tau32 = ROOT.TH1F("h_AK8Tau32"+histogramSuffix,";AK8_{#tau_{32}};Number", 50, 0.0, 1.0)
+    h_AK8Tau21 = ROOT.TH1F("h_AK8Tau21"+histogramSuffix,";AK8_{#tau_{21}};Number", 50, 0.0, 1.0)
     
 	#AK8
-    h_AK4Pt    = ROOT.TH1F("h_AK4Pt",";ak4jet_{pT} (GeV);Number", 100, 0, 1500)
-    h_AK4Eta   = ROOT.TH1F("h_AK4Eta",";ak4jet_{#eta};Number", 50, -2.5, 2.5)
-    h_AK4Phi   = ROOT.TH1F("h_AK4Phi",";ak4jet_{#phi};Number", 50, -3.2, 3.2)
-    h_AK4M     = ROOT.TH1F("h_AK4M",";ak4jet_{mass};Number", 100, 0, 400)
-    h_AK4Bdisc = ROOT.TH1F("h_AK4Bdisc",";ak4jet_{bdisc};Number", 100, 0, 1.0)
+    h_AK4Pt    = ROOT.TH1F("h_AK4Pt"+histogramSuffix,";ak4jet_{pT} (GeV);Number", 100, 0, 1500)
+    h_AK4Eta   = ROOT.TH1F("h_AK4Eta"+histogramSuffix,";ak4jet_{#eta};Number", 100, -2.5, 2.5)
+    h_AK4Phi   = ROOT.TH1F("h_AK4Phi"+histogramSuffix,";ak4jet_{#phi};Number", 100, -3.5, 3.5)
+    h_AK4M     = ROOT.TH1F("h_AK4M"+histogramSuffix,";ak4jet_{mass};Number", 100, 0, 400)
+    h_AK4Bdisc = ROOT.TH1F("h_AK4Bdisc"+histogramSuffix,";ak4jet_{bdisc};Number", 100, 0, 1.0)
 
     # Histograms by Yuan
     h_AK4Num   = ROOT.TH1F("h_AK4Num",";ak4jet_{num};Number", 10, 0, 10)
@@ -85,14 +121,19 @@ def plot_mttbar(argv) :
 
 
     h_drAK4AK8    = ROOT.TH1F("h_drAK4AK8",";#DeltaR_{AK4, AK8} ;Number", 50, 0, 5)
+    h_drAK4AK8    = ROOT.TH1F("h_drAK4AK8"+histogramSuffix,";#DeltaR_{AK4, AK8} ;Number", 100, 0, 5)
 #    h_drLepAK8    = ROOT.TH1F("h_drLepAK8",";{#delta r}_{lep, AK8} ;Number", 100, 0, 1500)
-    h_drLepAK4    = ROOT.TH1F("h_drLepAK4",";#DeltaR_{lep, AK4} ;Number", 50, 0, 5)
-    h_dPhiLepAK8 = ROOT.TH1F("h_dPhiLepAK8",";#Delta#phi_{l,AK8};Number", 50, 0.0, 1.0)
+    h_drLepAK4    = ROOT.TH1F("h_drLepAK4"+histogramSuffix,";#DeltaR_{lep, AK4} ;Number", 100, 0, 5)
+    h_dPhiLepAK8 = ROOT.TH1F("h_dPhiLepAK8"+histogramSuffix,";#Delta#phi_{l,AK8};Number", 100, 0.0, 1.0)
+
     
     fin = ROOT.TFile.Open(options.file_in)
 
     trees = [ fin.Get("TreeSemiLept") ]
-    
+
+    tot_entries, count = 0, 0
+    cut1, cut2, cut3, cut4 = 0 ,0 ,0 ,0
+
     for itree,t in enumerate(trees) :
 
         #if options.isData : 
@@ -131,8 +172,8 @@ def plot_mttbar(argv) :
         SemiLepMETpt        = array.array('f', [-1.])
         SemiLepMETphi       = array.array('f', [-1.])
         SemiLepNvtx         = array.array('f', [-1.])
-        FatJetDeltaPhiLep      = array.array('f', [-1.]) 
-        NearestAK4JetBDisc            = array.array('f', [-1.])
+        FatJetDeltaPhiLep   = array.array('f', [-1.]) 
+        NearestAK4JetBDisc  = array.array('f', [-1.])
         NearestAK4JetPt     = array.array('f', [-1.])
         NearestAK4JetEta    = array.array('f', [-1.])
         NearestAK4JetPhi    = array.array('f', [-1.])
@@ -236,13 +277,14 @@ def plot_mttbar(argv) :
 
 
         entries = t.GetEntriesFast()
-        print 'Processing tree ' + str(itree)
+        tot_entries +=entries
+
+        #print 'Processing tree ' + str(itree)
 
         eventsToRun = entries
-        print entries
         for jentry in xrange( eventsToRun ):
-            if jentry % 100000 == 0 :
-                print 'processing ' + str(jentry)
+            #if jentry % 100000 == 0 :
+            #    print 'processing ' + str(jentry)
             # get the next tree in the chain and verify
             ientry = t.GetEntry( jentry )
             if ientry < 0:
@@ -268,6 +310,8 @@ def plot_mttbar(argv) :
                     continue
 
                 # Muon triggers only for now (use HLT_Ele50)caloIdVT_GsfTrkIdT_PFJet165 with index 1 and HLT_Ele115_CaloIdVT_GsfTrkIdT with index 2)
+
+                # Muon triggers only for now (use HLT_Ele50_CaloIdVT_GsfTrkIdT_PFJet165 with index 1 and HLT_Ele115_CaloIdVT_GsfTrkIdT with index 2)
                 if SemiLeptTrig[1] == 0 and SemiLeptTrig[2] == 0 :
                     continue
 
@@ -282,19 +326,53 @@ def plot_mttbar(argv) :
             # Leptoon
             theLepton = ROOT.TLorentzVector()
             theLepton.SetPtEtaPhiE( LeptonPt[0], LeptonEta[0], LeptonPhi[0], LeptonEnergy[0] ) # Assume massless
-            
-            
+
             tau32 = FatJetTau32[0]
             mass_sd = FatJetMassSoftDrop[0]
             bdisc = NearestAK4JetBDisc[0]
+            
+              
+            h_pileupWeight.GetBinContent(SemiLepNvtx+1)     
+            #Weights
+            weight = 1
+            if options.jec =='up':
+                weight = 1*NearestAK4JetJECUpSys[0]*FatJetJECUpSys[0]
+            if options.jec =='down':
+                weight = 1*NearestAK4JetJECDnSys[0]*FatJetJECDnSys[0]
+            if options.jer =='up':
+                weight = 1*NearestAK4JetJERUpSys[0]*FatJetJECUpSys[0]
+            if options.jer =='down':
+                weight = 1*NearestAK4JetJERDnSys[0]*FatJetJECDnSys[0]
+
+            #print weight
+            
+            #preselection histos            
+            #h_AK4BdiscPreSel.Fill( NearestAK4JetBDisc[0], weight )
+            #h_AK8Tau32PreSel.Fill(FatJetTau32[0], weight )
+            #h_AK8Tau21PreSel.Fill(FatJetTau21[0], weight )
 
             passKin = hadTopCandP4.Perp() > 100.
             passTopTag = tau32 < 0.8 and mass_sd > 110. and mass_sd < 250.
             pass2DCut = LeptonPtRel[0] > 20. or LeptonDRMin[0] > 0.4
             passBtag = bdisc > 0.7
 
-            if not passKin or not pass2DCut or not passBtag or not passTopTag :
+            # Applying and counting cuts
+            if not passKin: 
                 continue
+            else:
+                cut1 +=1
+            if not pass2DCut: 
+                continue
+            else:
+                cut2 +=1
+            if not passBtag: 
+                continue                
+            else:
+                cut3 +=1
+            if not passTopTag: 
+                continue                
+            else:
+                cut4 +=1
 
 
             ##  ____  __.__                              __  .__         __________                     
@@ -322,6 +400,7 @@ def plot_mttbar(argv) :
 
             ttbarCand = hadTopCandP4 + lepTopCandP4
             mttbar = ttbarCand.M()
+<<<<<<< HEAD
             
 	    #Weights
             weight = 1
@@ -339,8 +418,12 @@ def plot_mttbar(argv) :
 	    h_AK8Num.Fill(FatJetMass.__len__())
 	    h_AK4Num.Fill(NearestAK4JetMass.__len__())
 	    h_lepNum.Fill(LeptonEnergy.__len__())
+=======
+			
+>>>>>>> 92ce074155254b4d01c9e02bc9048ba24563f269
 
             # Filling plots
+            count +=1
             h_mttbar.Fill( mttbar, weight )
             h_mtopHadGroomed.Fill( mass_sd, weight )
             h_mtopHad.Fill( hadTopCandP4.M(), weight )
@@ -354,20 +437,40 @@ def plot_mttbar(argv) :
             h_AK8Pt.Fill(FatJetPt[0], weight )
             h_AK8Eta.Fill(FatJetEta[0], weight )
             h_AK8Phi.Fill(FatJetPhi[0], weight )
-            h_AK8Tau32.Fill(FatJetTau32[0], weight )
-            h_AK8Tau21.Fill(FatJetTau21[0], weight )
-
+    
             h_AK4Pt.Fill( NearestAK4JetPt[0], weight )
             h_AK4Eta.Fill( NearestAK4JetEta[0], weight )
             h_AK4Phi.Fill( NearestAK4JetPhi[0], weight )
             h_AK4M.Fill( NearestAK4JetMass[0], weight )
             h_AK4Bdisc.Fill( NearestAK4JetBDisc[0], weight )
-			
-			#dr's
-            h_drAK4AK8.Fill(bJetCandP4.DeltaR(bJetCandP4), weight )
-            h_drLepAK4.Fill(theLepton.DeltaR(hadTopCandP4), weight )
+      
+            #dr's
+            h_drAK4AK8.Fill(bJetCandP4.DeltaR(bJetCandP4), weight)
+            h_drLepAK4.Fill(theLepton.DeltaR(hadTopCandP4), weight)
+            h_AK8Tau32.Fill(FatJetTau32[0], weight )
+            h_AK8Tau21.Fill(FatJetTau21[0], weight )
+
 
             h_dPhiLepAK8.Fill(FatJetDeltaPhiLep[0], weight )
+
+    # Fill cut-flow
+    h_cuts.SetBinContent(1, cut1)
+    h_cuts.SetBinContent(2, cut2)
+    h_cuts.SetBinContent(3, cut3)
+    h_cuts.SetBinContent(4, cut4)
+    h_cuts.GetXaxis().SetBinLabel(1, "passKin")
+    h_cuts.GetXaxis().SetBinLabel(2, "pass2DCut" )
+    h_cuts.GetXaxis().SetBinLabel(3, "passBtag")
+    h_cuts.GetXaxis().SetBinLabel(4, "passTopTag")
+
+
+    print options.file_out, " : ", count, "/", tot_entries, ", Percentage:", round(float(count)/(float(tot_entries+1))*100,3), "%", \
+     "Cut_flow: [", cut1, cut2, cut3, cut4, "]"
+
+    fh.write(options.file_in)
+    fh.write("  "+str(count))
+    fh.write('\n')
+    fh.close
 
     fout.cd()
     fout.Write()
